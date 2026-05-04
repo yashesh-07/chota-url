@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # 1. Database
+  db:
+    image: postgres:15
+    container_name: url_postgres
+    restart: always
+    # CONSISTENCY: Still uses env_file, but maps them so Postgres recognizes them
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - url_network
+
+  # 2. Redis
+  redis:
+    image: redis:alpine
+    container_name: url_redis
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "6379:6379"
+    networks:
+      - url_network
+
+  # 3. Backend
+  backend:
+    build: ./backend
+    container_name: url_backend
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - url_network
+
+  # 4. Frontend
+  frontend:
+    build: ./frontend
+    container_name: url_frontend
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - url_network
+
+networks:
+  url_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
